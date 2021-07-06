@@ -1,0 +1,115 @@
+spring:
+  application:
+    name: nacos-consume-app
+  profiles:
+    active: dev
+  cloud:
+    nacos:
+      discovery:
+        prefix: testApp
+        server-addr: 10.0.0.129:8848
+      config:
+        server-addr: 10.0.0.129:8848
+        prefix: testApp
+        file-extension: properties
+        refresh-enabled: true #默认开启自动刷新
+    sentinel:
+      transport:
+        dashboard: 10.0.0.129:8082
+        port: 8719
+      datasource:
+        dsl:
+          nacos:
+            server-addr: 10.0.0.129:8848
+            data-id: sentinel-dev.properties
+            group-id: DEFAULT_GROUP
+            data-type: json
+            rule-type: flow
+
+  redis:
+    jedis:
+      pool:
+        # 连接池最大连接数(使用负数表示没有限制),默认8]
+        max-active: 8
+        #最大阻塞等待时间(负数表示没限制)
+        max-wait: -1
+        #最大空闲
+        max-idle: 8
+        #最小空闲
+        min-idle: 0
+        time-between-eviction-runs: 1
+    #password: 123456
+    database: 0
+    port: 6379
+    host: 10.0.0.129
+    timeout: 5000
+nacos-provider-app:
+  ribbon:
+    #NFLoadBalancerRuleClassName: com.netflix.loadbalancer.RandomRule #配置规则 随机
+    NFLoadBalancerRuleClassName: com.netflix.loadbalancer.RoundRobinRule #配置规则  v 轮询
+    #    NFLoadBalancerRuleClassName: com.netflix.loadbalancer.RetryRule #配置规则 重试
+    #    NFLoadBalancerRuleClassName: com.netflix.loadbalancer.WeightedResponseTimeRule #配置规则 响应时间权重
+    #    NFLoadBalancerRuleClassName: com.netflix.loadbalancer.BestAvailableRule #配置规则 最空闲连接策略
+    ConnectTimeout: 500 #请求连接超时时间
+    ReadTimeout: 1000 #请求处理的超时时间
+    OkToRetryOnAllOperations: false #对所有请求都进行重试
+    MaxAutoRetriesNextServer: 0 #切换实例的重试次数
+    MaxAutoRetries: 0 #对当前实例的重试次数
+
+feign:
+  hystrix:
+    enabled: true
+  httpclient:
+    enabled: true
+  #sentinel:
+  #  enabled: true
+
+hystrix:
+  command:
+    default:
+      execution:
+        timeout:
+          enabled: true
+        isolation:
+          thread:
+            timeoutInMilliseconds: 5000 #缺省为1000
+      fallback:
+        isolation:
+          semaphore:
+            maxConcurrentRequests: 10 #调用线程允许请求 HystrixCommand.GetFallback() 的最大数量，默认 10。超出时将会有异常抛出，注意：该项配置对于 THREAD 隔离模式也起作用
+      circuitBreaker:
+        requestVolumeThreshold: 2 #当在配置时间窗口内达到此数量的失败后，进行短路。默认 20 个（10s 内请求失败数量达到 20 个，断路器开）
+        sleepWindowInMilliseconds: 5 #短路多久以后开始尝试是否恢复，默认 5s
+        errorThresholdPercentage: 50% #出错百分比阈值，当达到此阈值后，开始短路。默认 50%
+  threadpool:
+    default:
+      coreSize: 10
+      maxQueueSize: 1 #最大排队长度。默认 -1，使用 SynchronousQueue。其他值则使用 LinkedBlockingQueue。如果要从 -1 换成其他值则需重启，即该值不能动态调整，若要动态调整，需要使用到下边这个配置
+      queueSizeRejectionThreshold: 5 #排队线程数量阈值，默认为 5，达到时拒绝，如果配置了该选项，队列的大小是该队列
+
+# log config
+  logging:
+     config: classpath:logback.xml
+
+
+  ### xxl-job admin address list, such as "http://address" or "http://address01,http://address02"
+xxl:
+  job:
+    admin:
+      addresses: http://127.0.0.1:8080/xxl-job-admin
+    accessToken:
+    executor:
+       appname: xxl-job-executor-sample
+### xxl-job executor registry-address: default use address to registry , otherwise use ip:port if address is null
+       address:
+       ip:
+       port: 9998
+       logpath: /data/applogs/xxl-job/jobhandler
+       logretentiondays: 30
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: env,health,metrics,info,hystrix.streamf

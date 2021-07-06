@@ -1,0 +1,15 @@
+spring:
+  application:
+    name: nacos-provider-app
+  profiles:
+    active: dev
+  cloud:
+    nacos:
+      discovery:
+        prefix: testApp
+        server-addr: 10.0.0.129:8848
+      config:
+        server-addr: 10.0.0.129:8848
+        prefix: testApp
+        file-extension: properties
+        refresh-enabled: true #默认开启自动刷新
