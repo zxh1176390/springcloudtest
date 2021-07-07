@@ -4,12 +4,15 @@ import com.alibaba.csp.sentinel.Entry;
 import com.alibaba.csp.sentinel.EntryType;
 import com.alibaba.csp.sentinel.SphU;
 import com.alibaba.csp.sentinel.annotation.SentinelResource;
+import com.alibaba.csp.sentinel.slots.block.AbstractRule;
 import com.alibaba.csp.sentinel.slots.block.BlockException;
 import com.alibaba.csp.sentinel.slots.block.RuleConstant;
 import com.alibaba.csp.sentinel.slots.block.flow.FlowRule;
 import com.alibaba.csp.sentinel.slots.block.flow.FlowRuleManager;
+import com.alibaba.fastjson.JSONObject;
 import com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand;
 import com.netflix.hystrix.contrib.javanica.annotation.HystrixProperty;
+import com.zxh.config.SentinelExceptionUtil;
 import com.zxh.feign.EchoFeignClient;
 import com.zxh.vo.Student;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +28,7 @@ import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @Description:
@@ -45,6 +49,10 @@ public class NacosConsumerFeignController {
     private Student student;
     @Autowired
     private RestTemplate restTemplate;
+
+    // 统计阻止数
+    private static AtomicInteger block = new AtomicInteger();
+
 
     @RequestMapping(value = "/echo/{message}")
     public String echo(@PathVariable("message") String message) {
@@ -88,7 +96,6 @@ public class NacosConsumerFeignController {
         return result;
     }
 
-
     /**
      * 初始化流控规则
      */
@@ -96,46 +103,52 @@ public class NacosConsumerFeignController {
     @RequestMapping(value = "/v1/{message}")
     public String testSentinelV1(@PathVariable("message") String message) {
 
-        Entry entity =null;
+        Entry entity = null;
         //关联受保护的资源
         try {
-            entity = SphU.entry("helloSentinelV1");
+            entity = SphU.entry("helloSentinelV1", EntryType.IN);
             try {
                 Thread.sleep(1000);
                 System.out.println("执行本地业务1");
-            }catch (InterruptedException e) {
+            } catch (InterruptedException e) {
             }
 
             //结束执行自己的业务方法
         } catch (BlockException e) {
+            block.incrementAndGet();
+            log.info("阻塞数：{}", block.get());
             log.info("testHelloSentinelV1方法被流控了");
             return "testHelloSentinelV1方法被流控了";
-        }finally {
-            if(entity!=null) {
+        } finally {
+            if (entity != null) {
                 entity.exit();
             }
         }
         return "OK1";
     }
-    @RequestMapping(value = "/v2/{message}")
-    @SentinelResource(value = "test",entryType = EntryType.IN, blockHandler = "blockHandler", fallback = "fallbackHandler")
-    public String testSentinel(@PathVariable("message") String message) {
-        try {
-            Thread.sleep(1000);
-            System.out.println("执行本地业务2");
-        }catch (InterruptedException e) {
-        }
-        String result ="Ok2";
+
+    @RequestMapping(value = "/v2")
+    @SentinelResource(value = "test", entryType = EntryType.IN, blockHandler = "handleException",
+            blockHandlerClass = {SentinelExceptionUtil.class})
+    public String testSentinel() {
+        System.out.println("执行本地业务2");
+        String result = "Ok2";
         //result = echoService.echo(message);
         return result;
     }
-    public String blockHandler(String message) {
-        String result="超过访问次数2次，被限流了";
-        log.error(result);
+
+    public String blockHandler(BlockException ex) {
+        try {
+            AbstractRule rule = ex.getRule();
+            log.error("Sentinel 异常，ruleLimitApp=" + ex.getRuleLimitApp() + " , rule -> " + JSONObject.toJSONString(rule), ex);
+        } catch (Exception e) {
+            log.error("Sentinel 异常处理错误", e);
+        }
+        String result = "超过访问次数2次，被限流了";
         return result;
     }
 
-    public String fallbackHandler(String message) {
+    public String fallbackHandler(Throwable ex) {
         log.error("失败被降级了");
         return "----fallbackHandler";
     }

@@ -17,6 +17,7 @@ spring:
       transport:
         dashboard: 10.0.0.129:8082
         port: 8719
+        clientIp: 10.1.3.183
       datasource:
         dsl:
           nacos:
