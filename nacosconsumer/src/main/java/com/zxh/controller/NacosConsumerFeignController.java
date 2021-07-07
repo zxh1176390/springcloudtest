@@ -88,18 +88,7 @@ public class NacosConsumerFeignController {
         return result;
     }
 
-    @RequestMapping(value = "/v2/{message}")
-    @SentinelResource(value = "test",entryType = EntryType.IN, blockHandler = "blockHandler", fallback = "fallbackHandler")
-    public String testSentinel(@PathVariable("message") String message) {
-        try {
-            Thread.sleep(1000);
-            System.out.println("执行本地业务2");
-        }catch (InterruptedException e) {
-        }
-        String result ="Ok2";
-         //result = echoService.echo(message);
-        return result;
-    }
+
     /**
      * 初始化流控规则
      */
@@ -128,7 +117,18 @@ public class NacosConsumerFeignController {
         }
         return "OK1";
     }
-
+    @RequestMapping(value = "/v2/{message}")
+    @SentinelResource(value = "test",entryType = EntryType.IN, blockHandler = "blockHandler", fallback = "fallbackHandler")
+    public String testSentinel(@PathVariable("message") String message) {
+        try {
+            Thread.sleep(1000);
+            System.out.println("执行本地业务2");
+        }catch (InterruptedException e) {
+        }
+        String result ="Ok2";
+        //result = echoService.echo(message);
+        return result;
+    }
     public String blockHandler(String message) {
         String result="超过访问次数2次，被限流了";
         log.error(result);
