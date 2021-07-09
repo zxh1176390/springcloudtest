@@ -103,25 +103,19 @@ public class NacosConsumerFeignController {
     @RequestMapping(value = "/v1/{message}")
     public String testSentinelV1(@PathVariable("message") String message) {
 
-        Entry entity = null;
+        Entry entry = null;
         //关联受保护的资源
         try {
-            entity = SphU.entry("helloSentinelV1", EntryType.IN);
-            try {
-                Thread.sleep(1000);
-                System.out.println("执行本地业务1");
-            } catch (InterruptedException e) {
-            }
-
-            //结束执行自己的业务方法
+            entry = SphU.entry("helloSentinelV1", EntryType.IN);
+            System.out.println("执行本地业务1，当前线程数：" + entry.getCurNode().curThreadNum());
         } catch (BlockException e) {
             block.incrementAndGet();
             log.info("阻塞数：{}", block.get());
             log.info("testHelloSentinelV1方法被流控了");
             return "testHelloSentinelV1方法被流控了";
         } finally {
-            if (entity != null) {
-                entity.exit();
+            if (entry != null) {
+                entry.exit();
             }
         }
         return "OK1";
@@ -131,7 +125,12 @@ public class NacosConsumerFeignController {
     @SentinelResource(value = "test", entryType = EntryType.IN, blockHandler = "handleException",
             blockHandlerClass = {SentinelExceptionUtil.class})
     public String testSentinel() {
-        System.out.println("执行本地业务2");
+
+        try {
+            Thread.sleep(2000);
+            System.out.println("执行本地业务2");
+        }catch (InterruptedException e) {
+        }
         String result = "Ok2";
         //result = echoService.echo(message);
         return result;
