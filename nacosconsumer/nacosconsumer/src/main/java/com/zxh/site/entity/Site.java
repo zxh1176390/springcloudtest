@@ -7,9 +7,6 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * <p>
- * 工地表
- * </p>
  *
  * @author 
  * @since 2021-07-20

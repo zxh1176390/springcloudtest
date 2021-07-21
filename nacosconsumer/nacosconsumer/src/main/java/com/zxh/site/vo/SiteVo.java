@@ -27,9 +27,6 @@ public class SiteVo{
      */
     private double lat;
 
-    /**
-     * 楼盘对应字典code
-     */
     private String buildingName;
 
 
