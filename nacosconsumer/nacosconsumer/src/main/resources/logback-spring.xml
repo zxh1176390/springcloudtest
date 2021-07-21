@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration debug="false">
+    <springProperty name="APP_NAME" source="spring.application.name" scope="context"/>
+    <property name="LOG_FILE" value="/consumer/server_logs/${APP_NAME}"/>
+
+    <!-- 控制台输出 -->
+    <appender name="stdoutAppender" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}][${APP_NAME}][%level][%X{tid}][%thread] %logger{20}-%M:%L %m%n
+            </pattern>
+        </encoder>
+    </appender>
+
+    <!-- root logger -->
+    <appender name="rootAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_FILE}/info.log</file>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}][${APP_NAME}][%level][%X{tid}][%thread] %logger{20} %m%n</pattern>
+            <immediateFlush>true</immediateFlush>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_FILE}/info-%d{yyyy-MM-dd-HH}-%i.log</fileNamePattern>
+            <maxFileSize>300MB</maxFileSize>
+            <maxHistory>240</maxHistory>
+            <CleanHistoryOnStart>true</CleanHistoryOnStart>
+            <totalSizeCap>60GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <!-- Error logger -->
+    <appender name="ERROR" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_FILE}/error.log</file>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>ERROR</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}][${APP_NAME}][%level][%X{tid}][%thread] %logger{20}-%M:%L %m%n
+            </pattern>
+            <immediateFlush>true</immediateFlush>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_FILE}/error-%d{yyyy-MM-dd-HH}-%i.log</fileNamePattern>
+            <maxFileSize>300MB</maxFileSize>
+            <maxHistory>240</maxHistory>
+            <CleanHistoryOnStart>true</CleanHistoryOnStart>
+            <totalSizeCap>60GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <appender name="httpProvider" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_FILE}/provider.log</file>
+        <encoder>
+            <pattern>%msg%n</pattern>
+            <immediateFlush>true</immediateFlush>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_FILE}/provider-%d{yyyy-MM-dd-HH}-%i.log</fileNamePattern>
+            <maxFileSize>300MB</maxFileSize>
+            <maxHistory>240</maxHistory>
+            <CleanHistoryOnStart>true</CleanHistoryOnStart>
+            <totalSizeCap>60GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <appender name="httpConsumer" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_FILE}/consumer.log</file>
+        <encoder>
+            <pattern>%msg%n</pattern>
+            <immediateFlush>true</immediateFlush>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_FILE}/consumer-%d{yyyy-MM-dd-HH}-%i.log</fileNamePattern>
+            <maxFileSize>300MB</maxFileSize>
+            <maxHistory>240</maxHistory>
+            <CleanHistoryOnStart>true</CleanHistoryOnStart>
+            <totalSizeCap>60GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <appender name="dbAccess" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_FILE}/dbaccess.log</file>
+        <encoder>
+            <pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}][${APP_NAME}][%level][%X{tid}][%thread] %logger{20} %m%n</pattern>
+            <immediateFlush>true</immediateFlush>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_FILE}/dbaccess-%d{yyyy-MM-dd-HH}-%i.log</fileNamePattern>
+            <maxFileSize>300MB</maxFileSize>
+            <maxHistory>240</maxHistory>
+            <CleanHistoryOnStart>true</CleanHistoryOnStart>
+            <totalSizeCap>60GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <appender name="asyncRootAppender" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="rootAppender"/>
+        <queueSize>1024</queueSize>
+        <neverBlock>true</neverBlock>
+    </appender>
+
+    <appender name="asyncHttpProvider" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="httpProvider"/>
+        <queueSize>1024</queueSize>
+        <neverBlock>true</neverBlock>
+    </appender>
+
+    <appender name="asyncHttpConsumer" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="httpConsumer"/>
+        <queueSize>1024</queueSize>
+        <neverBlock>true</neverBlock>
+    </appender>
+
+    <appender name="asyncDbAccess" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="dbAccess"/>
+        <queueSize>1024</queueSize>
+        <neverBlock>true</neverBlock>
+    </appender>
+
+    <logger name="http_provider_log" additivity="false">
+        <appender-ref ref="asyncHttpProvider"/>
+    </logger>
+
+    <logger name="http_consumer_log" additivity="false">
+        <appender-ref ref="asyncHttpConsumer"/>
+    </logger>
+
+    <logger name="db_access_log" additivity="false">
+        <appender-ref ref="asyncDbAccess"/>
+    </logger>
+    <logger name="com.zxh" level="DEBUG" additivity="false">
+        <appender-ref ref="dbAccess"/>
+        <appender-ref ref="stdoutAppender"/>
+    </logger>
+    <root level="INFO">
+        <!--获取不到property值先注释掉-->
+<!--        <if condition='property("spring.profiles.active").equals("dev") || property("spring.profiles.active").equals("")'>
+            <then>-->
+                <appender-ref ref="stdoutAppender"/>
+<!--           </then>
+        </if>-->
+        <appender-ref ref="asyncRootAppender"/>
+        <appender-ref ref="ERROR"/>
+    </root>
+
+</configuration>

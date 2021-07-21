@@ -106,7 +106,7 @@ hystrix:
 
 # log config
   logging:
-     config: classpath:logback.xml
+    config: classpath:logback-spring.xml
 
 
   ### xxl-job admin address list, such as "http://address" or "http://address01,http://address02"
