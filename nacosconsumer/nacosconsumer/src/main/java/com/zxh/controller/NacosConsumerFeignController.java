@@ -16,9 +16,11 @@ import com.zxh.config.SentinelExceptionUtil;
 import com.zxh.feign.EchoFeignClient;
 import com.zxh.vo.Student;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.tomcat.util.net.SocketWrapperBase;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
+import org.springframework.http.HttpRequest;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -26,8 +28,10 @@ import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -96,41 +100,77 @@ public class NacosConsumerFeignController {
         return result;
     }
 
+    @PostConstruct
+    public void  initFlow(){
+        List<FlowRule> flowRules = FlowRuleManager.getRules();
+        //创建流控规则对象
+        FlowRule flowRule = new FlowRule();
+        //设置流控规则 QPS
+        flowRule.setGrade(RuleConstant.FLOW_GRADE_QPS);
+        //设置受保护的资源
+        flowRule.setResource("helloSentinelV1");
+        flowRule.setLimitApp("nacos-consume-app");
+        flowRule.setControlBehavior(RuleConstant.CONTROL_BEHAVIOR_DEFAULT);
+        flowRule.setStrategy(0);
+        //设置受保护的资源的阈值
+        flowRule.setCount(1);
+        flowRules.add(flowRule);
+        //加载配置好的规则
+        FlowRuleManager.loadRules(flowRules);
+    }
     /**
      * 初始化流控规则
      */
 
-    @RequestMapping(value = "/v1/{message}")
-    public String testSentinelV1(@PathVariable("message") String message) {
+    @RequestMapping(value = "/v1")
+    public String testSentinelV1(HttpServletRequest request) throws Exception{
+        ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(20,20,
+                10000, TimeUnit.SECONDS,new LinkedBlockingQueue<>());
+        List<String> list = new ArrayList<>();
+        for (int i = 0; i < 100;i++) {
+            Future<String> future = threadPoolExecutor.submit(new Callable() {
+                @Override
+                public String call() {
+                    for (int i = 0; i < 100;i++) {
+                        Entry entry = null;
+                        try {
+                            entry = SphU.entry("helloSentinelV1", EntryType.OUT);
+                            // try {
+                            // Thread.sleep(2000);
+                            log.info("执行本地业务1，当前线程数：" + entry.getCurNode().curThreadNum());
+                            //} catch (InterruptedException e) {
+                            // }
 
-        Entry entry = null;
-        //关联受保护的资源
-        try {
-            entry = SphU.entry("helloSentinelV1", EntryType.IN);
-            System.out.println("执行本地业务1，当前线程数：" + entry.getCurNode().curThreadNum());
-        } catch (BlockException e) {
-            block.incrementAndGet();
-            log.info("阻塞数：{}", block.get());
-            log.info("testHelloSentinelV1方法被流控了");
-            return "testHelloSentinelV1方法被流控了";
-        } finally {
-            if (entry != null) {
-                entry.exit();
-            }
+                        } catch (BlockException e) {
+                            block.incrementAndGet();
+                            log.info("阻塞数：{}", block.get());
+                            log.info("testHelloSentinelV1方法被流控了");
+                            return "testHelloSentinelV1方法被流控了";
+                        } finally {
+                            if (entry != null) {
+                                entry.exit();
+                            }
+                        }
+                    }
+                    return "OK1";
+                }
+            });
+            list.add(future.get().toString());
         }
-        return "OK1";
+        threadPoolExecutor.shutdown();
+        return list.toArray().toString();
     }
 
-    @RequestMapping(value = "/v2")
+    @RequestMapping(value = "/v2/test")
     @SentinelResource(value = "test", entryType = EntryType.IN, blockHandler = "handleException",
             blockHandlerClass = {SentinelExceptionUtil.class})
     public String testSentinel() {
 
-        try {
-            Thread.sleep(2000);
+        //try {
+            //Thread.sleep(2000);
             System.out.println("执行本地业务2");
-        }catch (InterruptedException e) {
-        }
+        //}catch (InterruptedException e) {
+        //}
         String result = "Ok2";
         //result = echoService.echo(message);
         return result;
